@@ -1,0 +1,7 @@
+arm_64bit=1
+kernel=kernel8.img
+enable_uart=1
+core_freq=250
+gpu_mem=64
+disable_overscan=1
+hdmi_force_hotplug=1
