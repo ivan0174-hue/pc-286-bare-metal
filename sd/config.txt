@@ -1,0 +1,12 @@
+arm_64bit=1
+kernel_address=0x80000
+armstub=armstub8-rpi4.bin
+kernel=kernel8-rpi4.img
+max_framebuffers=2
+initial_turbo=0
+
+# HDMI: forza il segnale e abilita l audio HDMI
+hdmi_force_hotplug=1
+hdmi_drive=2
+disable_overscan=1
+gpu_mem=64

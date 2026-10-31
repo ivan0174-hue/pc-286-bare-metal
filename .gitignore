@@ -1,4 +1,13 @@
 *.o
+*.d
 *.elf
 *.img
+*.lst
+*.map
 *.zip
+*.bin
+/build/
+/circle/
+/roms/
+/pc286
+/test/rm/

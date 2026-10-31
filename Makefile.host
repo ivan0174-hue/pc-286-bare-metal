@@ -1,0 +1,5 @@
+CC=gcc
+CFLAGS=-O2 -g -Wall -Wno-unused-function -DCPU_TRACE -DNO_KBC_LOG
+SRC=core/cpu.c core/pc.c core/vga.c core/ide.c core/sb.c core/opl3.c host/main.c
+pc286: $(SRC) core/*.h
+	$(CC) $(CFLAGS) -o $@ $(SRC) -lm

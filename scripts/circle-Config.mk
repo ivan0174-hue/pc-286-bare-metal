@@ -1,0 +1,6 @@
+AARCH = 64
+RASPPI = 4
+PREFIX64 = aarch64-linux-gnu-
+STDLIB_SUPPORT = 1
+CFLAGS += -mno-outline-atomics
+DEFINE += -DARM_ALLOW_MULTI_CORE

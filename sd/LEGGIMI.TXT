@@ -1,0 +1,52 @@
+PC286 - Emulatore bare metal 80286 per Raspberry Pi 4
+=====================================================
+
+Macchina emulata
+- CPU 80286 (modo reale e protetto), da 6 a 25 MHz
+- RAM: 640 KB, 1, 2 o 4 MB
+- BIOS: Quadtel Enhanced 286 v3.04.02 (le tue ROM QUADT89H/L unite)
+- Video: Diamond Stealth VRAM (S3 86C911, 1 MB) con il suo BIOS v2.31
+  (VGA, SVGA e VESA 640x480x256 con banking)
+- Disco C: 145 MB (tipo 46 del BIOS: 969 cil., 9 testine, 34 settori)
+  con MS-DOS 4.00 compilato dai sorgenti Microsoft (licenza MIT)
+- Sound Blaster 2.0: porta 220h, IRQ 7, DMA 1, OPL2/AdLib a 388h
+- Tastiera USB (layout italiano tramite KEYB IT in AUTOEXEC.BAT)
+
+Installazione
+1. Formatta una micro SD in FAT32 (va bene qualsiasi dimensione da 1 GB in su).
+2. Copia TUTTO il contenuto di questa cartella nella radice della SD
+   (config.txt, start4.elf, kernel8-rpi4.img, la cartella pc286, ...).
+3. Inserisci la SD nel Raspberry Pi 4, collega monitor HDMI e tastiera USB
+   e accendi. Il disco C: viene caricato in RAM (qualche secondo), poi parte
+   il POST del BIOS e DOS.
+
+Menu (tasto F12)
+- Velocita' CPU: 6, 8, 10, 12, 16, 20, 25 MHz (subito attiva)
+- Memoria RAM: 640 KB / 1 / 2 / 4 MB (attiva dopo "Riavvia il PC")
+- Sound Blaster attiva o disattivata
+- Uscita audio: HDMI oppure jack 3,5 mm
+- Volume
+- Avvio veloce: il POST e il test memoria girano alla massima velocita'
+- Salva impostazioni (scrive pc286/pc286.cfg)
+- Riavvia il PC (reset completo)
+Frecce per scegliere e cambiare, Invio per confermare, Esc o F12 per tornare.
+Ctrl+Alt+Canc funziona come su un PC vero (riavvio a caldo).
+
+Disco C:
+- Le modifiche fatte da DOS vengono riscritte su pc286/c.img ogni 2 secondi
+  circa. Prima di spegnere aspetta qualche secondo dopo l'ultimo salvataggio
+  (oppure usa F12 > Salva impostazioni, che scrive anche il disco).
+- Per copiare giochi e programmi: spegni, metti la SD nel PC e apri c.img
+  con un programma che monta immagini disco "raw" (es. OSFMount o
+  WinImage su Windows, mtools o "mount -o loop,offset=17408" su Linux).
+  La partizione FAT16 inizia al settore 34 (offset 17408 byte).
+- C:\DOS contiene i comandi di MS-DOS 4.00, C:\UTIL due programmi di prova
+  (SBTEST = test Sound Blaster, GFXTEST = test modi grafici, tasto per avanzare),
+  C:\GIOCHI e' vuota per te.
+
+Note
+- Il DOS 4.00 non ha HIMEM.SYS: la memoria estesa e' disponibile ai
+  programmi tramite INT 15h (es. SMARTDRV.SYS o RAMDRIVE.SYS /E in C:\DOS).
+- Senza RTC sul Raspberry la data riparte dal 27-10-2026 a ogni accensione;
+  usa i comandi DATE e TIME se ti servono.
+- Se il monitor non ha l'audio HDMI, scegli il jack dal menu F12.

@@ -1,48 +1,57 @@
-# pi286 – emulatore PC 286 @ 25 MHz bare metal per Raspberry Pi 3
+# PC286 – emulatore PC/AT 80286 bare metal per Raspberry Pi 4
 
-Nessun sistema operativo: `kernel8.img` parte direttamente dal firmware del Pi e fa girare un PC AT 286 emulato.
+Emulatore di un PC AT 286 che gira **senza sistema operativo** sul Raspberry Pi 4
+(libreria [Circle](https://github.com/rsta2/circle), AArch64). Si accende
+direttamente nel BIOS del PC emulato e avvia **MS-DOS 4.00 compilato dai sorgenti
+pubblicati da Microsoft** (licenza MIT).
 
-## Cosa emula
-| Componente | Stato |
+## Macchina emulata
+
+| Componente | Dettagli |
 |---|---|
-| CPU 80286 | modo **reale** completo (incl. PUSHA/POPA, ENTER/LEAVE, BOUND, IMUL imm, shift imm, INS/OUTS). **Modo protetto NON implementato** (niente HIMEM/DOS-extender/Win 3.x standard). Nessun 287. |
-| Velocità | 25 MHz, sincronizzata al timer reale; regolabile con `CYC_PER_INSN` in `emu.h` |
-| RAM | 640K + 15 MB estesa (INT 15h/87h, A20 via porta 92h / 8042) |
-| BIOS | emulato ad alto livello: INT 08/09/10/11/12/13/15/16/18/19/1A |
-| Floppy A: | file `FLOPPY.IMG` (160K…2.88M, geometria dalla dimensione) |
-| HDD C: | file `HDD.IMG` (immagine raw, fino a 384 MB; CHS dedotta dalla tabella partizioni; scritture rimandate alla SD se il file è contiguo) |
-| VGA | testo 80x25, **mode 13h 320x200x256**, **mode X** (unchained, map mask, latch copy), DAC 256 colori, 3DA retrace |
-| Audio | **Sound Blaster 2.0** (A220 I5 D1): DSP, DMA 8 bit single/auto-init, high-speed, time constant; **AdLib/OPL2 con sintesi FM** (9 canali, 4 forme d onda, ADSR, feedback, tremolo/vibrato; senza KSL/KSR e ritmica); speaker PC. Uscita sul jack 3.5 mm (PWM 44.1 kHz) |
-| Altro | PIC 8259, PIT 8254, DMA 8237, CMOS, tastiera 8042 |
+| CPU | 80286, modo reale e protetto (descrittori, gate, task switch, LOADALL), da 6 a 25 MHz |
+| RAM | 640 KB, 1, 2 o 4 MB (A20 tramite 8042) |
+| Chipset | 8259 ×2, 8254, 8042, MC146818 (CMOS/RTC), 8237 ×2 |
+| BIOS | Quadtel Enhanced 286 v3.04.02 (**ROM non incluse**) |
+| Video | Diamond Stealth VRAM (S3 86C911, 1 MB): VGA, SVGA, VESA con banking (**ROM non inclusa**) |
+| Disco | controller AT/IDE, disco da 145 MB (tipo BIOS 46: 969/9/34) |
+| Audio | Sound Blaster 2.0 (DSP 2.01, A220 I7 D1) + OPL2 ([Nuked-OPL3](https://github.com/nukeykt/Nuked-OPL3)), PC speaker |
+| Uscite | HDMI (immagine 4:3 scalata), audio HDMI o jack 3,5 mm, tastiera USB |
 
-Nel DOS: `SET BLASTER=A220 I5 D1 T2`
+Menu con **F12**: velocità CPU, RAM, Sound Blaster, uscita audio, volume,
+avvio veloce del POST, salvataggio impostazioni, reset.
 
-## SD card
-Prima partizione **FAT32** (quella di boot del Pi) con:
-```
-bootcode.bin start.elf fixup.dat (dal repo raspberrypi/firmware)
-config.txt      (questo)
-kernel8.img     (compilato)
-FLOPPY.IMG      (opzionale, bootabile)
-HDD.IMG         (opzionale; partizione grande abbastanza!)
-(VGAFONT.BIN non serve più: il font 8x16 CP437 è incorporato)
-```
-Nomi **8.3 in maiuscolo nella radice**. Boot: prima il floppy (se ha firma 55AA), altrimenti l'HDD.
+## Struttura
 
-## Compilare
 ```
-sudo apt install gcc-aarch64-linux-gnu
-make CROSS=aarch64-linux-gnu-
+core/    emulatore portabile in C (cpu, pc, vga+S3, ide, sb, opl3)
+pi/      frontend bare metal Circle: video su core 1, menu, USB, audio, SD
+host/    harness Linux headless per i test (screenshot PPM, WAV, tasti)
+test/    runner per la suite SingleStepTests 80286 (130.400 test, 99,8% ok)
+disk/    MBR, creazione immagine disco, programmi di prova SBTEST/GFXTEST
+dos/     configurazioni DOSBox per compilare MS-DOS 4.00
+sd/      config.txt e LEGGIMI.TXT per la scheda SD
+scripts/ script di build
 ```
 
-## Input / debug
-**Tastiera USB** (`usb.c`): driver host DWC2 in DMA/polling, enumerazione dell'hub LAN9514 del Pi 3, split transaction per i device low/full-speed, tastiera HID *boot protocol* (US layout) convertita in scancode AT (set 1, con prefisso E0 per frecce/Ins/Canc/Home/Fine/PgSu/PgGiù). Collegala a una qualsiasi porta USB del Pi. Se non viene trovata, resta attiva la **seriale** (mini UART GPIO14/15, 115200 8N1) come tastiera di ripiego, e la UART stampa sempre il log `usb: ...` dell'enumerazione. Video: HDMI 640x480.
+## Compilazione (Linux, Ubuntu 24.04)
 
-## Limiti noti / da fare
-- **Il driver USB è la parte più a rischio** (registri DWC2, timing delle split transaction, FIFO): se non trova la tastiera, leggi il log `usb:` sulla UART e dimmi dove si ferma. Un solo canale, nessun hot-plug, nessun layout non-US, niente LED (Bloc Maiusc) né tastiere con hub integrato.
-- **Non è stato provato su hardware** (nessun Pi in questo ambiente): compilazione/sintassi e test del core CPU fatti solo su host x86. Aspettati di dover fare debug (UART stampa gli errori SD/FAT).
-- Se i colori sono invertiti: scambia R e B in `fb_set_palette()` (plat.c).
-- Nessun modo protetto, nessun EGA planare completo (modi 0Dh/10h/12h), nessun write-mode VGA 2/3, testo grafico INT 10h in mode 13h non disegnato.
-- OPL2 approssimato (non cycle-accurate: timbro simile ma non identico a un vero YM3812; modo ritmico a percussioni non emulato), nessun SB Pro stereo/SB16, nessun mouse/seriale/stampante.
-- FAT32 solo radice e nomi 8.3; SD con bus 4 bit a 25 MHz; l'HDD è interamente caricato in RAM all'avvio.
-- Per attivare il jack audio: GPIO40/41, il Pi 3 lo usa già di default.
+```sh
+sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mtools nasm dosbox python3 curl git
+scripts/build_dos.sh      # compila MS-DOS 4.00 dai sorgenti Microsoft (in DOSBox)
+scripts/build_disk.sh     # crea build/c.img con DOS installato
+scripts/build_pi.sh       # scarica Circle e compila pi/kernel8-rpi4.img
+# metti le tue ROM in roms/: QUADT89L.ROM, QUADT89H.ROM, vgabios.bin
+scripts/make_sd.sh        # prepara build/sd: copiane il contenuto su una SD FAT32
+```
+
+Test sul PC: `make -f Makefile.host`, poi
+`./pc286 -bios bios.bin -vga vgabios.bin -hd build/c.img -chs 969,9,34 -t 20 -shot s.ppm`.
+
+## Stato
+
+Collaudato in emulazione (harness Linux e QEMU `raspi3b` con una build Circle per
+Pi 3): POST completo, DOS 4.00, tastiera USB, menu, Sound Blaster, modi grafici
+13h/12h/VESA 101h. **Non ancora provato su un Raspberry Pi 4 reale.**
+
+Vedi `sd/LEGGIMI.TXT` per l'uso e le limitazioni.
